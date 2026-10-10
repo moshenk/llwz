@@ -1,98 +1,104 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MonthGrid } from '@/features/calendar/month-grid';
+import { useTheme } from '@/hooks/use-theme';
+import { addMonths, formatDate } from '@/utils/date';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+export default function CalendarHome() {
+  const theme = useTheme();
+  const router = useRouter();
+
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth()); // 0-indexed
+  const today = formatDate(new Date());
+
+  const changeMonth = (delta: number) => {
+    const next = addMonths(year, month, delta);
+    setYear(next.year);
+    setMonth(next.month);
+  };
+
+  const goToToday = () => {
+    setYear(now.getFullYear());
+    setMonth(now.getMonth());
+  };
+
+  const openDate = (date: string) => {
+    router.push({ pathname: '/day/[date]', params: { date } });
+  };
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top']}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={[styles.appTitle, { color: theme.text }]}>个人日历本</Text>
+          <Pressable onPress={goToToday} hitSlop={8}>
+            <Text style={[styles.todayText, { color: theme.accent }]}>今天</Text>
+          </Pressable>
+        </View>
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+        <View style={styles.monthRow}>
+          <Pressable onPress={() => changeMonth(-1)} hitSlop={12} style={styles.monthNavButton}>
+            <Text style={[styles.monthNavArrow, { color: theme.text }]}>‹</Text>
+          </Pressable>
+          <Text style={[styles.monthTitle, { color: theme.text }]}>
+            {year}年{month + 1}月
+          </Text>
+          <Pressable onPress={() => changeMonth(1)} hitSlop={12} style={styles.monthNavButton}>
+            <Text style={[styles.monthNavArrow, { color: theme.text }]}>›</Text>
+          </Pressable>
+        </View>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        <MonthGrid year={year} month={month} today={today} onSelectDate={openDate} />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  container: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    paddingHorizontal: 16,
   },
-  title: {
-    textAlign: 'center',
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
   },
-  code: {
-    textTransform: 'uppercase',
+  appTitle: {
+    fontSize: 20,
+    fontWeight: '700',
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  todayText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  monthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    marginBottom: 12,
+  },
+  monthTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  monthNavButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  monthNavArrow: {
+    fontSize: 28,
+    lineHeight: 30,
+    fontWeight: '500',
   },
 });
